@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi5 Face Recognition Dashboard</title>
+    
+    <!-- Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.min.js"></script>
+    
+    <!-- Vuetify -->
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.3.2/dist/vuetify.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.3.2/dist/vuetify.min.js"></script>
+    
+    <!-- Material Design Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link href="/static/css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <!-- App Bar -->
+            <v-app-bar color="primary" density="compact" elevation="2">
+                <template v-slot:prepend>
+                    <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+                </template>
+                
+                <v-app-bar-title>
+                    <div class="d-flex align-center">
+                        <v-icon icon="mdi-face-recognition" class="mr-2"></v-icon>
+                        Pi5 Face Recognition
+                    </div>
+                </v-app-bar-title>
+                
+                <template v-slot:append>
+                    <v-btn icon @click="toggleDarkMode">
+                        <v-icon>{{ isDarkMode ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
+                    </v-btn>
+                    
+                    <v-btn icon @click="refreshData">
+                        <v-icon>mdi-refresh</v-icon>
+                    </v-btn>
+                    
+                    <v-menu>
+                        <template v-slot:activator="{ props }">
+                            <v-btn icon v-bind="props">
+                                <v-icon>mdi-dots-vertical</v-icon>
+                            </v-btn>
+                        </template>
+                        
+                        <v-list>
+                            <v-list-item @click="showSettings = true">
+                                <template v-slot:prepend>
+                                    <v-icon>mdi-cog</v-icon>
+                                </template>
+                                <v-list-item-title>Settings</v-list-item-title>
+                            </v-list-item>
+                            
+                            <v-list-item @click="showAbout = true">
+                                <template v-slot:prepend>
+                                    <v-icon>mdi-information</v-icon>
+                                </template>
+                                <v-list-item-title>About</v-list-item-title>
+                            </v-list-item>
+                            
+                            <v-divider></v-divider>
+                            
+                            <v-list-item @click="restartSystem">
+                                <template v-slot:prepend>
+                                    <v-icon>mdi-restart</v-icon>
+                                </template>
+                                <v-list-item-title>Restart System</v-list-item-title>
+                            </v-list-item>
+                            
+                            <v-list-item @click="shutdownSystem">
+                                <template v-slot:prepend>
+                                    <v-icon>mdi-power</v-icon>
+                                </template>
+                                <v-list-item-title>Shutdown System</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
+                </template>
+            </v-app-bar>
+            
+            <!-- Navigation Drawer -->
+            <v-navigation-drawer v-model="drawer" temporary>
+                <v-list>
+                    <v-list-item title="Dashboard" prepend-icon="mdi-view-dashboard" @click="currentPage = 'dashboard'"></v-list-item>
+                    <v-list-item title="Live View" prepend-icon="mdi-camera" @click="currentPage = 'live'"></v-list-item>
+                    <v-list-item title="People" prepend-icon="mdi-account-group" @click="currentPage = 'people'"></v-list-item>
+                    <v-list-item title="Alerts" prepend-icon="mdi-bell" @click="currentPage = 'alerts'"></v-list-item>
+                    <v-list-item title="Analytics" prepend-icon="mdi-chart-bar" @click="currentPage = 'analytics'"></v-list-item>
+                    <v-list-item title="System" prepend-icon="mdi-desktop-tower-monitor" @click="currentPage = 'system'"></v-list-item>
+                </v-list>
+                
+                <template v-slot:append>
+                    <div class="pa-2">
+                        <v-btn block color="primary" @click="showSettings = true">
+                            <v-icon start>mdi-cog</v-icon>
+                            Settings
+                        </v-btn>
+                    </div>
+                </template>
+            </v-navigation-drawer>
+            
+            <!-- Main Content -->
+            <v-main>
+                <v-container fluid>
+                    <!-- Dashboard Page -->
+                    <div v-if="currentPage === 'dashboard'">
+                        <h1 class="text-h4 mb-4">Dashboard</h1>
+                        
+                        <v-row>
+                            <!-- Stats Cards -->
+                            <v-col cols="12" md="3">
+                                <v-card class="mb-4">
+                                    <v-card-text class="text-center">
+                                        <div class="text-h3 font-weight-bold">{{ stats.totalVisitors }}</div>
+                                        <div class="text-subtitle-1">Total Visitors</div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            
+                            <v-col cols="12" md="3">
+                                <v-card class="mb-4">
+                                    <v-card-text class="text-center">
+                                        <div class="text-h3 font-weight-bold">{{ stats.knownVisitors }}</div>
+                                        <div class="text-subtitle-1">Known Visitors</div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            
+                            <v-col cols="12" md="3">
+                                <v-card class="mb-4">
+                                    <v-card-text class="text-center">
+                                        <div class="text-h3 font-weight-bold">{{ stats.unknownVisitors }}</div>
+                                        <div class="text-subtitle-1">Unknown Visitors</div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            
+                            <v-col cols="12" md="3">
+                                <v-card class="mb-4">
+                                    <v-card-text class="text-center">
+                                        <div class="text-h3 font-weight-bold">{{ stats.alertsToday }}</div>
+                                        <div class="text-subtitle-1">Alerts Today</div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                        
+                        <v-row>
+                            <!-- Live Feed -->
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-camera</v-icon>
+                                        Live Feed
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <div class="live-feed-container">
+                                            <img :src="liveStreamUrl" alt="Live Feed" class="live-feed-image">
+                                            
+                                            <div v-for="face in currentFaces" :key="face.id" class="face-box" :style="getFaceBoxStyle(face)">
+                                                <div class="face-label" :class="{'known-face': face.personId, 'unknown-face': !face.personId}">
+                                                    {{ face.personId ? face.name : 'Unknown' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </v-card-text>
+                                    
+                                    <v-card-actions>
+                                        <v-btn color="primary" @click="currentPage = 'live'">
+                                            <v-icon start>mdi-fullscreen</v-icon>
+                                            Full Screen
+                                        </v-btn>
+                                        
+                                        <v-spacer></v-spacer>
+                                        
+                                        <v-btn icon @click="togglePause">
+                                            <v-icon>{{ isPaused ? 'mdi-play' : 'mdi-pause' }}</v-icon>
+                                        </v-btn>
+                                        
+                                        <v-btn icon @click="captureSnapshot">
+                                            <v-icon>mdi-camera</v-icon>
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-col>
+                            
+                            <!-- Recent Activity -->
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-history</v-icon>
+                                        Recent Activity
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-timeline density="compact" align="start">
+                                            <v-timeline-item v-for="activity in recentActivity" :key="activity.id" :dot-color="getActivityColor(activity.type)">
+                                                <div class="d-flex align-center">
+                                                    <v-avatar size="36" class="mr-2">
+                                                        <v-img v-if="activity.imagePath" :src="activity.imagePath" alt="Person"></v-img>
+                                                        <v-icon v-else>mdi-account</v-icon>
+                                                    </v-avatar>
+                                                    
+                                                    <div>
+                                                        <div class="text-subtitle-1">{{ activity.title }}</div>
+                                                        <div class="text-caption">{{ formatTime(activity.timestamp) }}</div>
+                                                    </div>
+                                                </div>
+                                            </v-timeline-item>
+                                        </v-timeline>
+                                    </v-card-text>
+                                    
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+                                        
+                                        <v-btn color="primary" variant="text" @click="currentPage = 'alerts'">
+                                            View All Alerts
+                                            <v-icon end>mdi-arrow-right</v-icon>
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                        
+                        <v-row>
+                            <!-- Visitor Trends -->
+                            <v-col cols="12">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-chart-line</v-icon>
+                                        Visitor Trends
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <canvas id="visitorTrendsChart" height="200"></canvas>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </div>
+                    
+                    <!-- Live View Page -->
+                    <div v-if="currentPage === 'live'">
+                        <h1 class="text-h4 mb-4">Live View</h1>
+                        
+                        <v-card>
+                            <v-card-text>
+                                <div class="live-feed-fullscreen">
+                                    <img :src="liveStreamUrl" alt="Live Feed" class="live-feed-image-fullscreen">
+                                    
+                                    <div v-for="face in currentFaces" :key="face.id" class="face-box" :style="getFaceBoxStyle(face, true)">
+                                        <div class="face-label" :class="{'known-face': face.personId, 'unknown-face': !face.personId}">
+                                            {{ face.personId ? face.name : 'Unknown' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </v-card-text>
+                            
+                            <v-card-actions>
+                                <v-btn color="primary" @click="togglePause">
+                                    <v-icon start>{{ isPaused ? 'mdi-play' : 'mdi-pause' }}</v-icon>
+                                    {{ isPaused ? 'Resume' : 'Pause' }}
+                                </v-btn>
+                                
+                                <v-btn color="primary" @click="captureSnapshot">
+                                    <v-icon start>mdi-camera</v-icon>
+                                    Capture
+                                </v-btn>
+                                
+                                <v-spacer></v-spacer>
+                                
+                                <v-btn-toggle v-model="liveViewMode" mandatory>
+                                    <v-btn value="normal">
+                                        <v-icon>mdi-eye</v-icon>
+                                    </v-btn>
+                                    
+                                    <v-btn value="detection">
+                                        <v-icon>mdi-face-recognition</v-icon>
+                                    </v-btn>
+                                    
+                                    <v-btn value="thermal">
+                                        <v-icon>mdi-image-filter-tint</v-icon>
+                                    </v-btn>
+                                </v-btn-toggle>
+                            </v-card-actions>
+                        </v-card>
+                        
+                        <v-row class="mt-4">
+                            <v-col cols="12" md="8">
+                                <v-card>
+                                    <v-card-title>
+                                        <v-icon start>mdi-account-multiple</v-icon>
+                                        Current Visitors
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Image</th>
+                                                    <th>Name</th>
+                                                    <th>Status</th>
+                                                    <th>Time</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            
+                                            <tbody>
+                                                <tr v-for="visitor in currentVisitors" :key="visitor.id">
+                                                    <td>
+                                                        <v-avatar size="36">
+                                                            <v-img v-if="visitor.imagePath" :src="visitor.imagePath" alt="Person"></v-img>
+                                                            <v-icon v-else>mdi-account</v-icon>
+                                                        </v-avatar>
+                                                    </td>
+                                                    <td>{{ visitor.name }}</td>
+                                                    <td>
+                                                        <v-chip :color="visitor.known ? 'success' : 'warning'" size="small">
+                                                            {{ visitor.known ? 'Known' : 'Unknown' }}
+                                                        </v-chip>
+                                                    </td>
+                                                    <td>{{ formatTime(visitor.timestamp) }}</td>
+                                                    <td>
+                                                        <v-btn icon size="small" @click="viewVisitorDetails(visitor)">
+                                                            <v-icon>mdi-information</v-icon>
+                                                        </v-btn>
+                                                        
+                                                        <v-btn v-if="!visitor.known" icon size="small" @click="addVisitor(visitor)">
+                                                            <v-icon>mdi-account-plus</v-icon>
+                                                        </v-btn>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </v-table>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            
+                            <v-col cols="12" md="4">
+                                <v-card>
+                                    <v-card-title>
+                                        <v-icon start>mdi-cctv</v-icon>
+                                        Camera Controls
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-select
+                                                    v-model="selectedCamera"
+                                                    :items="availableCameras"
+                                                    label="Camera"
+                                                    item-title="name"
+                                                    item-value="id"
+                                                    return-object
+                                                ></v-select>
+                                            </v-col>
+                                            
+                                            <v-col cols="12">
+                                                <v-slider
+                                                    v-model="cameraZoom"
+                                                    label="Zoom"
+                                                    min="1"
+                                                    max="10"
+                                                    step="0.1"
+                                                    thumb-label
+                                                ></v-slider>
+                                            </v-col>
+                                            
+                                            <v-col cols="12">
+                                                <v-slider
+                                                    v-model="cameraExposure"
+                                                    label="Exposure"
+                                                    min="-5"
+                                                    max="5"
+                                                    step="0.5"
+                                                    thumb-label
+                                                ></v-slider>
+                                            </v-col>
+                                            
+                                            <v-col cols="12">
+                                                <v-slider
+                                                    v-model="cameraBrightness"
+                                                    label="Brightness"
+                                                    min="0"
+                                                    max="100"
+                                                    step="1"
+                                                    thumb-label
+                                                ></v-slider>
+                                            </v-col>
+                                        </v-row>
+                                        
+                                        <v-btn block color="primary" @click="applyCameraSettings">
+                                            Apply Settings
+                                        </v-btn>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </div>
+                    
+                    <!-- People Page -->
+                    <div v-if="currentPage === 'people'">
+                        <div class="d-flex align-center mb-4">
+                            <h1 class="text-h4">People</h1>
+                            
+                            <v-spacer></v-spacer>
+                            
+                            <v-btn color="primary" @click="showAddPersonDialog = true">
+                                <v-icon start>mdi-account-plus</v-icon>
+                                Add Person
+                            </v-btn>
+                        </div>
+                        
+                        <v-card>
+                            <v-card-text>
+                                <v-row>
+                                    <v-col cols="12" md="4">
+                                        <v-text-field
+                                            v-model="peopleSearch"
+                                            label="Search People"
+                                            prepend-inner-icon="mdi-magnify"
+                                            clearable
+                                        ></v-text-field>
+                                    </v-col>
+                                    
+                                    <v-col cols="12" md="4">
+                                        <v-select
+                                            v-model="peopleSort"
+                                            label="Sort By"
+                                            :items="[
+                                                { title: 'Name (A-Z)', value: 'name_asc' },
+                                                { title: 'Name (Z-A)', value: 'name_desc' },
+                                                { title: 'Last Seen (Recent)', value: 'last_seen_desc' },
+                                                { title: 'Last Seen (Oldest)', value: 'last_seen_asc' },
+                                                { title: 'Visit Count (High-Low)', value: 'visit_count_desc' },
+                                                { title: 'Visit Count (Low-High)', value: 'visit_count_asc' }
+                                            ]"
+                                            item-title="title"
+                                            item-value="value"
+                                        ></v-select>
+                                    </v-col>
+                                    
+                                    <v-col cols="12" md="4">
+                                        <v-select
+                                            v-model="peopleFilter"
+                                            label="Filter"
+                                            :items="[
+                                                { title: 'All People', value: 'all' },
+                                                { title: 'Recently Seen', value: 'recent' },
+                                                { title: 'Frequent Visitors', value: 'frequent' },
+                                                { title: 'Rare Visitors', value: 'rare' }
+                                            ]"
+                                            item-title="title"
+                                            item-value="value"
+                                        ></v-select>
+                                    </v-col>
+                                </v-row>
+                                
+                                <v-row>
+                                    <v-col v-for="person in filteredPeople" :key="person.id" cols="12" sm="6" md="4" lg="3">
+                                        <v-card class="person-card">
+                                            <v-img
+                                                v-if="person.imagePath"
+                                                :src="person.imagePath"
+                                                height="200"
+                                                cover
+                                            ></v-img>
+                                            
+                                            <v-avatar v-else size="200" class="person-avatar">
+                                                <v-icon size="100">mdi-account</v-icon>
+                                            </v-avatar>
+                                            
+                                            <v-card-title>{{ person.name }}</v-card-title>
+                                            
+                                            <v-card-text>
+                                                <div class="d-flex align-center mb-2">
+                                                    <v-icon size="small" class="mr-1">mdi-calendar</v-icon>
+                                                    <span class="text-caption">First seen: {{ formatDate(person.firstSeen) }}</span>
+                                                </div>
+                                                
+                                                <div class="d-flex align-center mb-2">
+                                                    <v-icon size="small" class="mr-1">mdi-clock</v-icon>
+                                                    <span class="text-caption">Last seen: {{ formatDate(person.lastSeen) }}</span>
+                                                </div>
+                                                
+                                                <div class="d-flex align-center">
+                                                    <v-icon size="small" class="mr-1">mdi-counter</v-icon>
+                                                    <span class="text-caption">Visits: {{ person.visitCount }}</span>
+                                                </div>
+                                            </v-card-text>
+                                            
+                                            <v-card-actions>
+                                                <v-btn icon @click="viewPersonDetails(person)">
+                                                    <v-icon>mdi-information</v-icon>
+                                                </v-btn>
+                                                
+                                                <v-btn icon @click="editPerson(person)">
+                                                    <v-icon>mdi-pencil</v-icon>
+                                                </v-btn>
+                                                
+                                                <v-spacer></v-spacer>
+                                                
+                                                <v-btn icon @click="deletePerson(person)">
+                                                    <v-icon>mdi-delete</v-icon>
+                                                </v-btn>
+                                            </v-card-actions>
+                                        </v-card>
+                                    </v-col>
+                                </v-row>
+                                
+                                <div v-if="filteredPeople.length === 0" class="text-center pa-4">
+                                    <v-icon size="64" color="grey">mdi-account-search</v-icon>
+                                    <div class="text-h6 mt-2">No people found</div>
+                                    <div class="text-subtitle-1">Try adjusting your search or filters</div>
+                                </div>
+                            </v-card-text>
+                            
+                            <v-card-actions>
+                                <v-spacer></v-spacer>
+                                
+                                <v-pagination
+                                    v-model="peoplePage"
+                                    :length="peoplePageCount"
+                                    :total-visible="7"
+                                ></v-pagination>
+                                
+                                <v-spacer></v-spacer>
+                            </v-card-actions>
+                        </v-card>
+                    </div>
+                    
+                    <!-- Alerts Page -->
+                    <div v-if="currentPage === 'alerts'">
+                        <div class="d-flex align-center mb-4">
+                            <h1 class="text-h4">Alerts</h1>
+                            
+                            <v-spacer></v-spacer>
+                            
+                            <v-btn-toggle v-model="alertsFilter" mandatory>
+                                <v-btn value="all">All</v-btn>
+                                <v-btn value="unprocessed">Unprocessed</v-btn>
+                                <v-btn value="processed">Processed</v-btn>
+                            </v-btn-toggle>
+                        </div>
+                        
+                        <v-card>
+                            <v-card-text>
+                                <v-data-table
+                                    :headers="alertsHeaders"
+                                    :items="filteredAlerts"
+                                    :items-per-page="10"
+                                    :search="alertsSearch"
+                                >
+                                    <template v-slot:top>
+                                        <v-toolbar flat>
+                                            <v-text-field
+                                                v-model="alertsSearch"
+                                                label="Search Alerts"
+                                                prepend-inner-icon="mdi-magnify"
+                                                clearable
+                                                hide-details
+                                                class="mr-4"
+                                            ></v-text-field>
+                                            
+                                            <v-spacer></v-spacer>
+                                            
+                                            <v-btn color="error" @click="clearAllAlerts">
+                                                <v-icon start>mdi-delete-sweep</v-icon>
+                                                Clear All
+                                            </v-btn>
+                                        </v-toolbar>
+                                    </template>
+                                    
+                                    <template v-slot:item.image="{ item }">
+                                        <v-avatar size="40">
+                                            <v-img :src="item.imagePath" alt="Alert"></v-img>
+                                        </v-avatar>
+                                    </template>
+                                    
+                                    <template v-slot:item.timestamp="{ item }">
+                                        {{ formatDateTime(item.timestamp) }}
+                                    </template>
+                                    
+                                    <template v-slot:item.alertType="{ item }">
+                                        <v-chip
+                                            :color="getAlertTypeColor(item.alertType)"
+                                            size="small"
+                                        >
+                                            {{ formatAlertType(item.alertType) }}
+                                        </v-chip>
+                                    </template>
+                                    
+                                    <template v-slot:item.processed="{ item }">
+                                        <v-chip
+                                            :color="item.processed ? 'success' : 'warning'"
+                                            size="small"
+                                        >
+                                            {{ item.processed ? 'Processed' : 'Unprocessed' }}
+                                        </v-chip>
+                                    </template>
+                                    
+                                    <template v-slot:item.actions="{ item }">
+                                        <v-btn icon size="small" @click="viewAlertDetails(item)">
+                                            <v-icon>mdi-information</v-icon>
+                                        </v-btn>
+                                        
+                                        <v-btn
+                                            v-if="!item.processed"
+                                            icon
+                                            size="small"
+                                            @click="processAlert(item)"
+                                        >
+                                            <v-icon>mdi-check</v-icon>
+                                        </v-btn>
+                                        
+                                        <v-btn icon size="small" @click="deleteAlert(item)">
+                                            <v-icon>mdi-delete</v-icon>
+                                        </v-btn>
+                                    </template>
+                                </v-data-table>
+                            </v-card-text>
+                        </v-card>
+                    </div>
+                    
+                    <!-- Analytics Page -->
+                    <div v-if="currentPage === 'analytics'">
+                        <h1 class="text-h4 mb-4">Analytics</h1>
+                        
+                        <v-row>
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-chart-timeline-variant</v-icon>
+                                        Visitor Trends
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-btn-toggle v-model="visitorTrendsTimeframe" mandatory>
+                                            <v-btn value="day">Day</v-btn>
+                                            <v-btn value="week">Week</v-btn>
+                                            <v-btn value="month">Month</v-btn>
+                                            <v-btn value="year">Year</v-btn>
+                                        </v-btn-toggle>
+                                        
+                                        <canvas id="analyticsVisitorTrendsChart" height="300"></canvas>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-chart-pie</v-icon>
+                                        Visitor Demographics
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-tabs v-model="demographicsTab">
+                                            <v-tab value="gender">Gender</v-tab>
+                                            <v-tab value="age">Age Groups</v-tab>
+                                            <v-tab value="emotion">Emotions</v-tab>
+                                        </v-tabs>
+                                        
+                                        <v-window v-model="demographicsTab">
+                                            <v-window-item value="gender">
+                                                <canvas id="genderChart" height="300"></canvas>
+                                            </v-window-item>
+                                            
+                                            <v-window-item value="age">
+                                                <canvas id="ageChart" height="300"></canvas>
+                                            </v-window-item>
+                                            
+                                            <v-window-item value="emotion">
+                                                <canvas id="emotionChart" height="300"></canvas>
+                                            </v-window-item>
+                                        </v-window>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                        
+                        <v-row>
+                            <v-col cols="12">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-chart-bar</v-icon>
+                                        Visitor Frequency
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <canvas id="visitorFrequencyChart" height="200"></canvas>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                        
+                        <v-row>
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-clock-time-four</v-icon>
+                                        Visits by Time of Day
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <canvas id="visitsByTimeChart" height="300"></canvas>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-calendar-week</v-icon>
+                                        Visits by Day of Week
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <canvas id="visitsByDayChart" height="300"></canvas>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                        
+                        <v-row>
+                            <v-col cols="12">
+                                <v-card>
+                                    <v-card-title>
+                                        <v-icon start>mdi-account-group</v-icon>
+                                        Top Visitors
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Rank</th>
+                                                    <th>Image</th>
+                                                    <th>Name</th>
+                                                    <th>Visit Count</th>
+                                                    <th>Last Visit</th>
+                                                    <th>Average Duration</th>
+                                                </tr>
+                                            </thead>
+                                            
+                                            <tbody>
+                                                <tr v-for="(visitor, index) in topVisitors" :key="visitor.id">
+                                                    <td>{{ index + 1 }}</td>
+                                                    <td>
+                                                        <v-avatar size="36">
+                                                            <v-img v-if="visitor.imagePath" :src="visitor.imagePath" alt="Person"></v-img>
+                                                            <v-icon v-else>mdi-account</v-icon>
+                                                        </v-avatar>
+                                                    </td>
+                                                    <td>{{ visitor.name }}</td>
+                                                    <td>{{ visitor.visitCount }}</td>
+                                                    <td>{{ formatDate(visitor.lastSeen) }}</td>
+                                                    <td>{{ formatDuration(visitor.avgDuration) }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </v-table>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </div>
+                    
+                    <!-- System Page -->
+                    <div v-if="currentPage === 'system'">
+                        <h1 class="text-h4 mb-4">System</h1>
+                        
+                        <v-row>
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-information</v-icon>
+                                        System Information
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-list>
+                                            <v-list-item>
+                                                <template v-slot:prepend>
+                                                    <v-icon>mdi-clock</v-icon>
+                                                </template>
+                                                <v-list-item-title>Uptime</v-list-item-title>
+                                                <v-list-item-subtitle>{{ formatUptime(systemStatus.uptime) }}</v-list-item-subtitle>
+                                            </v-list-item>
+                                            
+                                            <v-list-item>
+                                                <template v-slot:prepend>
+                                                    <v-icon>mdi-thermometer</v-icon>
+                                                </template>
+                                                <v-list-item-title>Temperature</v-list-item-title>
+                                                <v-list-item-subtitle>{{ systemStatus.temperature }}°C</v-list-item-subtitle>
+                                            </v-list-item>
+                                            
+                                            <v-list-item>
+                                                <template v-slot:prepend>
+                                                    <v-icon>mdi-camera</v-icon>
+                                                </template>
+                                                <v-list-item-title>Camera Status</v-list-item-title>
+                                                <v-list-item-subtitle>
+                                                    <v-chip
+                                                        :color="systemStatus.cameraStatus === 'connected' ? 'success' : 'error'"
+                                                        size="small"
+                                                    >
+                                                        {{ systemStatus.cameraStatus }}
+                                                    </v-chip>
+                                                </v-list-item-subtitle>
+                                            </v-list-item>
+                                            
+                                            <v-list-item>
+                                                <template v-slot:prepend>
+                                                    <v-icon>mdi-chip</v-icon>
+                                                </template>
+                                                <v-list-item-title>Hailo Status</v-list-item-title>
+                                                <v-list-item-subtitle>
+                                                    <v-chip
+                                                        :color="systemStatus.hailoStatus === 'connected' ? 'success' : 'error'"
+                                                        size="small"
+                                                    >
+                                                        {{ systemStatus.hailoStatus }}
+                                                    </v-chip>
+                                                </v-list-item-subtitle>
+                                            </v-list-item>
+                                            
+                                            <v-list-item>
+                                                <template v-slot:prepend>
+                                                    <v-icon>mdi-update</v-icon>
+                                                </template>
+                                                <v-list-item-title>Last Updated</v-list-item-title>
+                                                <v-list-item-subtitle>{{ formatDateTime(systemStatus.lastUpdated) }}</v-list-item-subtitle>
+                                            </v-list-item>
+                                        </v-list>
+                                    </v-card-text>
+                                    
+                                    <v-card-actions>
+                                        <v-btn color="primary" @click="refreshSystemStatus">
+                                            <v-icon start>mdi-refresh</v-icon>
+                                            Refresh
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-col>
+                            
+                            <v-col cols="12" md="6">
+                                <v-card class="mb-4">
+                                    <v-card-title>
+                                        <v-icon start>mdi-gauge</v-icon>
+                                        Resource Usage
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <div class="mb-4">
+                                            <div class="d-flex justify-space-between align-center mb-1">
+                                                <span>CPU Usage</span>
+                                                <span>{{ systemStatus.cpuUsage }}%</span>
+                                            </div>
+                                            <v-progress-linear
+                                                :model-value="systemStatus.cpuUsage"
+                                                :color="getResourceColor(systemStatus.cpuUsage)"
+                                                height="10"
+                                                rounded
+                                            ></v-progress-linear>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <div class="d-flex justify-space-between align-center mb-1">
+                                                <span>Memory Usage</span>
+                                                <span>{{ systemStatus.memoryUsage }}%</span>
+                                            </div>
+                                            <v-progress-linear
+                                                :model-value="systemStatus.memoryUsage"
+                                                :color="getResourceColor(systemStatus.memoryUsage)"
+                                                height="10"
+                                                rounded
+                                            ></v-progress-linear>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <div class="d-flex justify-space-between align-center mb-1">
+                                                <span>Disk Usage</span>
+                                                <span>{{ systemStatus.diskUsage }}%</span>
+                                            </div>
+                                            <v-progress-linear
+                                                :model-value="systemStatus.diskUsage"
+                                                :color="getResourceColor(systemStatus.diskUsage)"
+                                                height="10"
+                                                rounded
+                                            ></v-progress-linear>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                                
+                                <v-card>
+                                    <v-card-title>
+                                        <v-icon start>mdi-brain</v-icon>
+                                        Model Status
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-list>
+                                            <v-list-item v-for="(status, model) in systemStatus.modelStatus" :key="model">
+                                                <template v-slot:prepend>
+                                                    <v-icon :color="status === 'loaded' ? 'success' : 'error'">
+                                                        {{ status === 'loaded' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                                                    </v-icon>
+                                                </template>
+                                                <v-list-item-title>{{ formatModelName(model) }}</v-list-item-title>
+                                                <v-list-item-subtitle>{{ status }}</v-list-item-subtitle>
+                                            </v-list-item>
+                                        </v-list>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                        
+                        <v-row>
+                            <v-col cols="12">
+                                <v-card>
+                                    <v-card-title>
+                                        <v-icon start>mdi-cog</v-icon>
+                                        System Actions
+                                    </v-card-title>
+                                    
+                                    <v-card-text>
+                                        <v-row>
+                                            <v-col cols="12" md="4">
+                                                <v-card variant="outlined">
+                                                    <v-card-title>Restart System</v-card-title>
+                                                    <v-card-text>
+                                                        Restart the face recognition system. This will stop all current processing and restart the service.
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <v-btn color="primary" @click="confirmRestartSystem">
+                                                            <v-icon start>mdi-restart</v-icon>
+                                                            Restart
+                                                        </v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-col>
+                                            
+                                            <v-col cols="12" md="4">
+                                                <v-card variant="outlined">
+                                                    <v-card-title>Backup Database</v-card-title>
+                                                    <v-card-text>
+                                                        Create a backup of the face recognition database, including all people, faces, and settings.
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <v-btn color="primary" @click="backupDatabase">
+                                                            <v-icon start>mdi-database-export</v-icon>
+                                                            Backup
+                                                        </v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-col>
+                                            
+                                            <v-col cols="12" md="4">
+                                                <v-card variant="outlined">
+                                                    <v-card-title>Check for Updates</v-card-title>
+                                                    <v-card-text>
+                                                        Check for updates to the face recognition system and install them if available.
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <v-btn color="primary" @click="checkForUpdates">
+                                                            <v-icon start>mdi-update</v-icon>
+                                                            Check
+                                                        </v-btn>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </div>
+                </v-container>
+            </v-main>
+            
+            <!-- Dialogs -->
+            
+            <!-- Settings Dialog -->
+            <v-dialog v-model="showSettings" max-width="600">
+                <v-card>
+                    <v-card-title>
+                        <v-icon start>mdi-cog</v-icon>
+                        Settings
+                    </v-card-title>
+                    
+                    <v-card-text>
+                        <v-tabs v-model="settingsTab">
+                            <v-tab value="general">General</v-tab>
+                            <v-tab value="recognition">Recognition</v-tab>
+                            <v-tab value="notifications">Notifications</v-tab>
+                            <v-tab value="advanced">Advanced</v-tab>
+                        </v-tabs>
+                        
+                        <v-window v-model="settingsTab">
+                            <v-window-item value="general">
+                                <v-list>
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.darkMode"
+                                            label="Dark Mode"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.autoRefresh"
+                                            label="Auto Refresh"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-select
+                                            v-model="settings.refreshInterval"
+                                            label="Refresh Interval"
+                                            :items="[
+                                                { title: '5 seconds', value: 5 },
+                                                { title: '10 seconds', value: 10 },
+                                                { title: '30 seconds', value: 30 },
+                                                { title: '1 minute', value: 60 },
+                                                { title: '5 minutes', value: 300 }
+                                            ]"
+                                            item-title="title"
+                                            item-value="value"
+                                        ></v-select>
+                                    </v-list-item>
+                                </v-list>
+                            </v-window-item>
+                            
+                            <v-window-item value="recognition">
+                                <v-list>
+                                    <v-list-item>
+                                        <v-slider
+                                            v-model="settings.confidenceThreshold"
+                                            label="Detection Confidence Threshold"
+                                            min="0"
+                                            max="1"
+                                            step="0.05"
+                                            thumb-label
+                                        ></v-slider>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-slider
+                                            v-model="settings.similarityThreshold"
+                                            label="Recognition Similarity Threshold"
+                                            min="0"
+                                            max="1"
+                                            step="0.05"
+                                            thumb-label
+                                        ></v-slider>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.enableAgeGender"
+                                            label="Enable Age/Gender Detection"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.enableEmotion"
+                                            label="Enable Emotion Detection"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.enableAntiSpoofing"
+                                            label="Enable Anti-Spoofing"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                </v-list>
+                            </v-window-item>
+                            
+                            <v-window-item value="notifications">
+                                <v-list>
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.enableNotifications"
+                                            label="Enable Notifications"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.notifyOnUnknown"
+                                            label="Notify on Unknown Faces"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.notifyOnKnown"
+                                            label="Notify on Known Faces"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-text-field
+                                            v-model="settings.emailNotifications"
+                                            label="Email for Notifications"
+                                            placeholder="your@email.com"
+                                        ></v-text-field>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-text-field
+                                            v-model="settings.telegramBotToken"
+                                            label="Telegram Bot Token"
+                                            placeholder="Bot token for Telegram notifications"
+                                        ></v-text-field>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-text-field
+                                            v-model="settings.telegramChatId"
+                                            label="Telegram Chat ID"
+                                            placeholder="Chat ID for Telegram notifications"
+                                        ></v-text-field>
+                                    </v-list-item>
+                                </v-list>
+                            </v-window-item>
+                            
+                            <v-window-item value="advanced">
+                                <v-list>
+                                    <v-list-item>
+                                        <v-select
+                                            v-model="settings.logLevel"
+                                            label="Log Level"
+                                            :items="[
+                                                { title: 'Debug', value: 'debug' },
+                                                { title: 'Info', value: 'info' },
+                                                { title: 'Warning', value: 'warning' },
+                                                { title: 'Error', value: 'error' }
+                                            ]"
+                                            item-title="title"
+                                            item-value="value"
+                                        ></v-select>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.enableWebInterface"
+                                            label="Enable Web Interface"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-text-field
+                                            v-model="settings.webInterfacePort"
+                                            label="Web Interface Port"
+                                            type="number"
+                                        ></v-text-field>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-switch
+                                            v-model="settings.enableSmartHomeIntegration"
+                                            label="Enable Smart Home Integration"
+                                            color="primary"
+                                            hide-details
+                                        ></v-switch>
+                                    </v-list-item>
+                                    
+                                    <v-list-item>
+                                        <v-text-field
+                                            v-model="settings.mqttBroker"
+                                            label="MQTT Broker"
+                                            placeholder="mqtt://broker.example.com"
+                                        ></v-text-field>
+                                    </v-list-item>
+                                </v-list>
+                            </v-window-item>
+                        </v-window>
+                    </v-card-text>
+                    
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        
+                        <v-btn color="primary" variant="text" @click="resetSettings">
+                            Reset to Default
+                        </v-btn>
+                        
+                        <v-btn color="primary" @click="saveSettings">
+                            Save
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+            
+            <!-- About Dialog -->
+            <v-dialog v-model="showAbout" max-width="500">
+                <v-card>
+                    <v-card-title>
+                        <v-icon start>mdi-information</v-icon>
+                        About
+                    </v-card-title>
+                    
+                    <v-card-text>
+                        <div class="text-center mb-4">
+                            <v-icon size="64" color="primary">mdi-face-recognition</v-icon>
+                            <h2 class="text-h5 mt-2">Pi5 Face Recognition</h2>
+                            <div class="text-subtitle-1">Version 2.0.0</div>
+                        </div>
+                        
+                        <p>
+                            Advanced face recognition system for Raspberry Pi 5 with Hailo AI HAT+.
+                            This system provides real-time face detection, recognition, and tracking
+                            with smart notifications and analytics.
+                        </p>
+                        
+                        <p class="mt-4">
+                            <strong>Hardware:</strong><br>
+                            Raspberry Pi 5<br>
+                            Hailo AI HAT+ (26 TOPS)<br>
+                            USB Camera
+                        </p>
+                        
+                        <p class="mt-4">
+                            <strong>Technologies:</strong><br>
+                            Python, FastAPI, Vue.js, Vuetify, Chart.js<br>
+                            SCRFD, RetinaFace, ArcFace, and more
+                        </p>
+                        
+                        <p class="mt-4 text-center">
+                            &copy; 2025 All Rights Reserved
+                        </p>
+                    </v-card-text>
+                    
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        
+                        <v-btn color="primary" @click="showAbout = false">
+                            Close
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+            
+            <!-- Add Person Dialog -->
+            <v-dialog v-model="showAddPersonDialog" max-width="600">
+                <v-card>
+                    <v-card-title>
+                        <v-icon start>mdi-account-plus</v-icon>
+                        Add Person
+                    </v-card-title>
+                    
+                    <v-card-text>
+                        <v-form ref="addPersonForm">
+                            <v-text-field
+                                v-model="newPerson.name"
+                                label="Name"
+                                required
+                                :rules="[v => !!v || 'Name is required']"
+                            ></v-text-field>
+                            
+                            <v-textarea
+                                v-model="newPerson.notes"
+                                label="Notes"
+                                rows="3"
+                            ></v-textarea>
+                            
+                            <v-file-input
+                                v-model="newPerson.image"
+                                label="Upload Image"
+                                accept="image/*"
+                                prepend-icon="mdi-camera"
+                                show-size
+                            ></v-file-input>
+                            
+                            <div class="text-center my-4">
+                                <div class="text-h6">- OR -</div>
+                            </div>
+                            
+                            <v-btn block color="primary" @click="capturePersonImage">
+                                <v-icon start>mdi-camera</v-icon>
+                                Capture from Camera
+                            </v-btn>
+                            
+                            <div v-if="newPerson.capturedImage" class="mt-4 text-center">
+                                <v-img
+                                    :src="newPerson.capturedImage"
+                                    max-height="200"
+                                    contain
+                                    class="mx-auto"
+                                ></v-img>
+                                
+                                <v-btn color="error" size="small" class="mt-2" @click="newPerson.capturedImage = null">
+                                    <v-icon start>mdi-delete</v-icon>
+                                    Remove
+                                </v-btn>
+                            </div>
+                        </v-form>
+                    </v-card-text>
+                    
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        
+                        <v-btn color="primary" variant="text" @click="showAddPersonDialog = false">
+                            Cancel
+                        </v-btn>
+                        
+                        <v-btn color="primary" @click="addPerson">
+                            Add
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+            
+            <!-- Confirmation Dialog -->
+            <v-dialog v-model="showConfirmDialog" max-width="400">
+                <v-card>
+                    <v-card-title>
+                        <v-icon start :color="confirmDialog.color">{{ confirmDialog.icon }}</v-icon>
+                        {{ confirmDialog.title }}
+                    </v-card-title>
+                    
+                    <v-card-text>
+                        {{ confirmDialog.message }}
+                    </v-card-text>
+                    
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        
+                        <v-btn color="primary" variant="text" @click="showConfirmDialog = false">
+                            Cancel
+                        </v-btn>
+                        
+                        <v-btn :color="confirmDialog.color" @click="confirmAction">
+                            {{ confirmDialog.confirmText }}
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+        </v-app>
+    </div>
+    
+    <!-- Custom JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

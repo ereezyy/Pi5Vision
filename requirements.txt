@@ -1,0 +1,12 @@
+# Raspberry Pi 5 Face Recognition System with Hailo AI HAT+
+
+## Requirements.txt
+
+```
+numpy>=1.20.0
+opencv-python>=4.5.0
+pillow>=8.0.0
+sqlite3>=3.0.0
+```
+
+This file will be used by the installation script to install the required Python dependencies.

@@ -1,0 +1,30 @@
+{
+    "base_dir": "/opt/pi5-face-recognition",
+    "camera_device": "/dev/video0",
+    "model_path": "/opt/pi5-face-recognition/models/retinaface_mobilenet_v1.hef",
+    "use_gstreamer": true,
+    "resolution": [1280, 720],
+    "fps": 30,
+    "confidence_threshold": 0.5,
+    "similarity_threshold": 0.6,
+    "alert_settings": {
+        "enable_notifications": true,
+        "alert_on_unknown": true,
+        "alert_cooldown_seconds": 30
+    },
+    "database": {
+        "path": "/opt/pi5-face-recognition/database/faces.db",
+        "backup_interval_hours": 24
+    },
+    "logging": {
+        "level": "INFO",
+        "file": "/opt/pi5-face-recognition/logs/face_recognition.log",
+        "max_size_mb": 10,
+        "backup_count": 5
+    },
+    "web_interface": {
+        "enabled": false,
+        "host": "0.0.0.0",
+        "port": 8080
+    }
+}
