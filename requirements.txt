@@ -1,12 +1,29 @@
 # Raspberry Pi 5 Face Recognition System with Hailo AI HAT+
+# WebContainer-compatible requirements
 
-## Requirements.txt
-
-```
+# Core dependencies that work in WebContainer
 numpy>=1.20.0
-opencv-python>=4.5.0
 pillow>=8.0.0
-sqlite3>=3.0.0
-```
 
-This file will be used by the installation script to install the required Python dependencies.
+# Web framework dependencies
+fastapi>=0.68.0
+uvicorn[standard]>=0.15.0
+jinja2>=3.0.0
+python-multipart>=0.0.5
+pydantic>=1.8.0
+
+# Additional utilities
+python-dateutil>=2.8.0
+pathlib2>=2.3.0
+
+# Note: The following packages are not available in WebContainer
+# but would be required on actual Raspberry Pi hardware:
+# opencv-python>=4.5.0  # Computer vision
+# sqlite3>=3.0.0        # Database (built into Python)
+# psutil>=5.8.0          # System monitoring
+# cryptography>=3.4.0   # Security features
+
+# Hardware-specific packages (Raspberry Pi only):
+# RPi.GPIO>=0.7.0        # GPIO control
+# picamera>=1.13         # Camera interface
+# gpiozero>=1.6.0        # GPIO utilities
