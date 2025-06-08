@@ -9,7 +9,6 @@ import sys
 import json
 import time
 from datetime import datetime
-from pathlib import Path
 
 def check_environment():
     """Check the current environment and available modules"""
@@ -25,7 +24,7 @@ def check_environment():
     # Check available modules
     modules_to_check = [
         'numpy', 'PIL', 'fastapi', 'uvicorn', 'jinja2', 
-        'pydantic', 'pathlib', 'json', 'datetime'
+        'pydantic', 'json', 'datetime'
     ]
     
     available_modules = []
@@ -180,7 +179,6 @@ def run_simple_server():
     try:
         import http.server
         import socketserver
-        import webbrowser
         from threading import Timer
         
         PORT = 8080
