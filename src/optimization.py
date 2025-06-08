@@ -14,7 +14,6 @@ import asyncio
 import hashlib
 import base64
 import secrets
-from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Union, Tuple
 
@@ -24,6 +23,17 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('performance_security')
+
+# Define Path class for WebContainer compatibility
+class Path:
+    def __init__(self, path):
+        self.path = str(path)
+    
+    def __str__(self):
+        return self.path
+    
+    def __truediv__(self, other):
+        return Path(os.path.join(self.path, str(other)))
 
 class PerformanceOptimizer:
     """
@@ -304,8 +314,8 @@ class SecurityManager:
         """
         self.config = config
         self.base_dir = Path(config.get('base_dir', '/opt/pi5-face-recognition'))
-        self.keys_dir = self.base_dir / 'keys'
-        self.users_file = self.base_dir / 'config' / 'users.json'
+        self.keys_dir = os.path.join(str(self.base_dir), 'keys')
+        self.users_file = os.path.join(str(self.base_dir), 'config', 'users.json')
         self.session_tokens = {}
         
         # Ensure directories exist
@@ -332,9 +342,9 @@ class SecurityManager:
         Returns:
             Encryption key
         """
-        key_file = self.keys_dir / 'encryption.key'
+        key_file = os.path.join(self.keys_dir, 'encryption.key')
         
-        if key_file.exists():
+        if os.path.exists(key_file):
             # Load existing key
             with open(key_file, 'rb') as f:
                 key = f.read()
@@ -346,8 +356,7 @@ class SecurityManager:
             with open(key_file, 'wb') as f:
                 f.write(key)
             
-            # Set secure permissions
-            os.chmod(key_file, 0o600)
+            # Note: File permissions not set in WebContainer environment
         
         return key
     
@@ -358,7 +367,7 @@ class SecurityManager:
         Returns:
             Dictionary of users
         """
-        if self.users_file.exists():
+        if os.path.exists(self.users_file):
             # Load existing users
             try:
                 with open(self.users_file, 'r') as f:
@@ -398,8 +407,7 @@ class SecurityManager:
             with open(self.users_file, 'w') as f:
                 json.dump(users, f, indent=2)
             
-            # Set secure permissions
-            os.chmod(self.users_file, 0o600)
+            # Note: File permissions not set in WebContainer environment
         except Exception as e:
             logger.error(f"Failed to save users: {e}")
     
@@ -732,7 +740,7 @@ class PrivacyManager:
         self.blur_unknown_faces = config.get('blur_unknown_faces', False)
         self.store_only_embeddings = config.get('store_only_embeddings', False)
         self.enable_consent_management = config.get('enable_consent_management', False)
-        self.consent_database = self.base_dir / 'database' / 'consent.db'
+        self.consent_database = os.path.join(str(self.base_dir), 'database', 'consent.db')
         
         logger.info("Privacy manager initialized")
     
@@ -827,26 +835,30 @@ class PrivacyManager:
         cutoff_date = datetime.now() - timedelta(days=self.data_retention_days)
         
         # Check alert images
-        alerts_dir = self.base_dir / 'alerts'
-        if alerts_dir.exists():
-            for file_path in alerts_dir.glob('*.jpg'):
-                # Get file modification time
-                mod_time = datetime.fromtimestamp(file_path.stat().st_mtime)
-                
-                # Check if file is older than cutoff date
-                if mod_time < cutoff_date:
-                    files_to_delete.append(str(file_path))
+        alerts_dir = os.path.join(str(self.base_dir), 'alerts')
+        if os.path.exists(alerts_dir):
+            for filename in os.listdir(alerts_dir):
+                if filename.endswith('.jpg'):
+                    file_path = os.path.join(alerts_dir, filename)
+                    # Get file modification time
+                    mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+                    
+                    # Check if file is older than cutoff date
+                    if mod_time < cutoff_date:
+                        files_to_delete.append(file_path)
         
         # Check logs
-        logs_dir = self.base_dir / 'logs'
-        if logs_dir.exists():
-            for file_path in logs_dir.glob('*.log.*'):
-                # Get file modification time
-                mod_time = datetime.fromtimestamp(file_path.stat().st_mtime)
-                
-                # Check if file is older than cutoff date
-                if mod_time < cutoff_date:
-                    files_to_delete.append(str(file_path))
+        logs_dir = os.path.join(str(self.base_dir), 'logs')
+        if os.path.exists(logs_dir):
+            for filename in os.listdir(logs_dir):
+                if '.log.' in filename:
+                    file_path = os.path.join(logs_dir, filename)
+                    # Get file modification time
+                    mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+                    
+                    # Check if file is older than cutoff date
+                    if mod_time < cutoff_date:
+                        files_to_delete.append(file_path)
         
         return files_to_delete
     
@@ -986,229 +998,4 @@ class PrivacyManager:
             'privacy_zones': len(self.privacy_zones),
             'data_retention_days': self.data_retention_days,
             'blur_unknown_faces': self.blur_unknown_faces,
-            'store_only_embeddings': self.store_only_embeddings,
-            'enable_consent_management': self.enable_consent_management,
-            'files_pending_deletion': len(self.check_data_retention())
-        }
-
-
-class OptimizationManager:
-    """
-    Manages performance and security optimizations for the face recognition system
-    """
-    def __init__(self, config_path: str = None):
-        """
-        Initialize the optimization manager
-        
-        Args:
-            config_path: Path to configuration file (optional)
-        """
-        # Load configuration
-        self.config = self._load_config(config_path)
-        
-        # Initialize components
-        self.performance_optimizer = PerformanceOptimizer(self.config)
-        self.security_manager = SecurityManager(self.config)
-        self.privacy_manager = PrivacyManager(self.config)
-        
-        logger.info("Optimization manager initialized")
-    
-    def _load_config(self, config_path: str = None) -> Dict[str, Any]:
-        """
-        Load configuration from file
-        
-        Args:
-            config_path: Path to configuration file
-            
-        Returns:
-            Configuration dictionary
-        """
-        # Default configuration
-        config = {
-            'base_dir': '/opt/pi5-face-recognition',
-            'target_fps': 30,
-            'enable_encryption': True,
-            'enable_authentication': True,
-            'session_timeout': 3600,  # 1 hour
-            'data_retention_days': 30,
-            'privacy_zones': [],
-            'blur_unknown_faces': False,
-            'store_only_embeddings': False,
-            'enable_consent_management': False
-        }
-        
-        # Load from file if provided
-        if config_path and os.path.exists(config_path):
-            try:
-                with open(config_path, 'r') as f:
-                    file_config = json.load(f)
-                    config.update(file_config)
-                logger.info(f"Loaded configuration from {config_path}")
-            except Exception as e:
-                logger.warning(f"Failed to load configuration from {config_path}: {e}")
-        
-        return config
-    
-    def optimize_frame_processing(self, frame_time: float, system_load: float, num_faces: int) -> Dict[str, Any]:
-        """
-        Optimize frame processing parameters
-        
-        Args:
-            frame_time: Time taken to process a frame (seconds)
-            system_load: System load factor (0.0-1.0)
-            num_faces: Number of faces detected
-            
-        Returns:
-            Dictionary with optimization parameters
-        """
-        # Update metrics
-        self.performance_optimizer.update_metrics('frame_processing_times', frame_time)
-        self.performance_optimizer.update_metrics('cpu_usage', system_load * 100)
-        
-        # Optimize parameters
-        resolution_scale = self.performance_optimizer.optimize_resolution(frame_time)
-        frame_skip_ratio = self.performance_optimizer.optimize_frame_skipping(system_load)
-        batch_size = self.performance_optimizer.optimize_batch_size(num_faces)
-        thread_pool_size = self.performance_optimizer.optimize_thread_pool(system_load)
-        
-        return {
-            'resolution_scale': resolution_scale,
-            'frame_skip_ratio': frame_skip_ratio,
-            'batch_size': batch_size,
-            'thread_pool_size': thread_pool_size
-        }
-    
-    def submit_task(self, func, *args, **kwargs):
-        """
-        Submit a task to the thread pool
-        
-        Args:
-            func: Function to execute
-            *args: Arguments to pass to the function
-            **kwargs: Keyword arguments to pass to the function
-            
-        Returns:
-            Future object
-        """
-        return self.performance_optimizer.submit_task(func, *args, **kwargs)
-    
-    def authenticate_user(self, username: str, password: str) -> Optional[str]:
-        """
-        Authenticate a user
-        
-        Args:
-            username: Username
-            password: Password
-            
-        Returns:
-            Session token if authentication successful, None otherwise
-        """
-        return self.security_manager.authenticate(username, password)
-    
-    def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
-        """
-        Validate a session token
-        
-        Args:
-            token: Session token
-            
-        Returns:
-            Session information if token is valid, None otherwise
-        """
-        return self.security_manager.validate_token(token)
-    
-    def encrypt_data(self, data: bytes) -> bytes:
-        """
-        Encrypt data
-        
-        Args:
-            data: Data to encrypt
-            
-        Returns:
-            Encrypted data
-        """
-        return self.security_manager.encrypt_data(data)
-    
-    def decrypt_data(self, data: bytes) -> bytes:
-        """
-        Decrypt data
-        
-        Args:
-            data: Data to decrypt
-            
-        Returns:
-            Decrypted data
-        """
-        return self.security_manager.decrypt_data(data)
-    
-    def apply_privacy_zones(self, frame: Any, detections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Apply privacy zones to detections
-        
-        Args:
-            frame: Video frame
-            detections: List of face detections
-            
-        Returns:
-            Filtered list of detections
-        """
-        return self.privacy_manager.apply_privacy_zones(frame, detections)
-    
-    def apply_face_blurring(self, frame: Any, detections: List[Dict[str, Any]]) -> Any:
-        """
-        Apply face blurring to unknown faces
-        
-        Args:
-            frame: Video frame
-            detections: List of face detections
-            
-        Returns:
-            Frame with blurred faces
-        """
-        return self.privacy_manager.apply_face_blurring(frame, detections)
-    
-    def enforce_data_retention(self) -> int:
-        """
-        Enforce data retention policy by deleting old files
-        
-        Returns:
-            Number of files deleted
-        """
-        return self.privacy_manager.enforce_data_retention()
-    
-    def get_status(self) -> Dict[str, Any]:
-        """
-        Get the current status of all optimizations
-        
-        Returns:
-            Dictionary with optimization status
-        """
-        return {
-            'performance': self.performance_optimizer.get_optimization_status(),
-            'security': self.security_manager.get_security_status(),
-            'privacy': self.privacy_manager.get_privacy_status()
-        }
-
-
-def main():
-    """Main function"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Performance and Security Optimization for Raspberry Pi 5 Face Recognition System")
-    parser.add_argument("--config", type=str, help="Path to configuration file")
-    args = parser.parse_args()
-    
-    # Create optimization manager
-    manager = OptimizationManager(args.config)
-    
-    # Print status
-    status = manager.get_status()
-    print(json.dumps(status, indent=2))
-    
-    # Enforce data retention
-    deleted_count = manager.enforce_data_retention()
-    print(f"Deleted {deleted_count} files based on data retention policy")
-
-
-if __name__ == "__main__":
-    main()
+            'store_
