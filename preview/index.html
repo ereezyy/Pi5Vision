@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi5Vision - Advanced Face Recognition System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 40px 0;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .header .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .dashboard {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .nav-bar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .nav-status {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .video-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            margin-bottom: 15px;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            position: relative;
+        }
+
+        .face-overlay {
+            position: absolute;
+            border: 3px solid #27ae60;
+            border-radius: 8px;
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        .face-overlay.unknown {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .face-label {
+            position: absolute;
+            top: -30px;
+            left: 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .video-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .control-btn:hover {
+            background: #2980b9;
+        }
+
+        .analytics-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.1);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .stat-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .chart-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #e3f2fd, #bbdefb);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .recent-activity {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .activity-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .activity-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .activity-info {
+            flex: 1;
+        }
+
+        .activity-name {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .activity-time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .activity-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-known {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-unknown {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .features-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .features-header h2 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .feature-description {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .tech-specs {
+            background: #2c3e50;
+            color: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        .tech-specs h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .spec-category {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .spec-category h3 {
+            color: #3498db;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .spec-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 30px 0;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .footer .links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .footer .links a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .footer .links a:hover {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .nav-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-eye"></i> Pi5Vision</h1>
+            <p class="subtitle">Advanced Face Recognition System for Raspberry Pi 5 with Hailo AI HAT+</p>
+            <span class="badge"><i class="fas fa-microchip"></i> 26 TOPS AI Accelerator</span>
+        </div>
+
+        <div class="dashboard">
+            <div class="nav-bar">
+                <div class="nav-brand">
+                    <i class="fas fa-tachometer-alt"></i> Live Dashboard
+                </div>
+                <div class="nav-status">
+                    <div class="status-item">
+                        <div class="status-dot"></div>
+                        <span>Camera Active</span>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-dot"></div>
+                        <span>Hailo Online</span>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-dot"></div>
+                        <span>AI Processing</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="video-section">
+                    <h3><i class="fas fa-video"></i> Live Video Feed</h3>
+                    <div class="video-container">
+                        <div class="video-placeholder">
+                            <i class="fas fa-camera" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <!-- Simulated face detection overlays -->
+                            <div class="face-overlay" style="top: 20%; left: 30%; width: 120px; height: 140px;">
+                                <div class="face-label">John Doe (0.94)</div>
+                            </div>
+                            <div class="face-overlay unknown" style="top: 40%; left: 60%; width: 100px; height: 120px;">
+                                <div class="face-label">Unknown (0.87)</div>
+                            </div>
+                        </div>
+                        <div class="video-controls">
+                            <button class="control-btn"><i class="fas fa-play"></i> Live</button>
+                            <button class="control-btn"><i class="fas fa-camera"></i> Snapshot</button>
+                            <button class="control-btn"><i class="fas fa-cog"></i> Settings</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-section">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">247</div>
+                            <div class="stat-label">Total Visitors</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">89</div>
+                            <div class="stat-label">Known Faces</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">12</div>
+                            <div class="stat-label">Today's Visits</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">97.2%</div>
+                            <div class="stat-label">Accuracy</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div class="chart-placeholder">
+                            <i class="fas fa-chart-line"></i> Visitor Analytics Chart
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recent-activity">
+                <div class="activity-header">
+                    <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                    <button class="control-btn">View All</button>
+                </div>
+                
+                <div class="activity-item">
+                    <div class="activity-avatar">JD</div>
+                    <div class="activity-info">
+                        <div class="activity-name">John Doe</div>
+                        <div class="activity-time">2 minutes ago</div>
+                    </div>
+                    <div class="activity-status status-known">Known</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-avatar">?</div>
+                    <div class="activity-info">
+                        <div class="activity-name">Unknown Visitor</div>
+                        <div class="activity-time">5 minutes ago</div>
+                    </div>
+                    <div class="activity-status status-unknown">Unknown</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-avatar">MS</div>
+                    <div class="activity-info">
+                        <div class="activity-name">Mary Smith</div>
+                        <div class="activity-time">12 minutes ago</div>
+                    </div>
+                    <div class="activity-status status-known">Known</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="features-section">
+            <div class="features-header">
+                <h2>Advanced Features</h2>
+                <p>Powered by cutting-edge AI and optimized for the Raspberry Pi 5 ecosystem</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-brain"></i></div>
+                    <div class="feature-title">Multi-Model AI Engine</div>
+                    <div class="feature-description">
+                        Ensemble approach using SCRFD, RetinaFace, and ArcFace models for superior accuracy and performance.
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <div class="feature-title">Responsive Web Dashboard</div>
+                    <div class="feature-description">
+                        Modern, mobile-friendly interface with real-time updates, dark/light modes, and touch optimization.
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-bell"></i></div>
+                    <div class="feature-title">Smart Notifications</div>
+                    <div class="feature-description">
+                        Multi-channel alerts via email, Telegram, MQTT, and voice announcements with customizable rules.
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="feature-title">Enterprise Security</div>
+                    <div class="feature-description">
+                        AES-256 encryption, role-based access control, privacy zones, and GDPR-compliant data handling.
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-home"></i></div>
+                    <div class="feature-title">Smart Home Integration</div>
+                    <div class="feature-description">
+                        Seamless connection with Home Assistant, MQTT, voice assistants, and smart locks for automation.
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
+                    <div class="feature-title">Advanced Analytics</div>
+                    <div class="feature-description">
+                        Comprehensive visitor statistics, demographic analysis, emotion detection, and trend visualization.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tech-specs">
+            <h2>Technical Specifications</h2>
+            <div class="specs-grid">
+                <div class="spec-category">
+                    <h3><i class="fas fa-microchip"></i> Hardware</h3>
+                    <div class="spec-item">
+                        <span>Platform</span>
+                        <span>Raspberry Pi 5</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>AI Accelerator</span>
+                        <span>Hailo-8 (26 TOPS)</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Memory</span>
+                        <span>4GB+ RAM</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Camera</span>
+                        <span>USB 1080p+</span>
+                    </div>
+                </div>
+
+                <div class="spec-category">
+                    <h3><i class="fas fa-cogs"></i> Performance</h3>
+                    <div class="spec-item">
+                        <span>Detection Speed</span>
+                        <span>32ms avg</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Recognition Speed</span>
+                        <span>18ms avg</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Accuracy</span>
+                        <span>97.2%</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Max Faces</span>
+                        <span>12+ simultaneous</span>
+                    </div>
+                </div>
+
+                <div class="spec-category">
+                    <h3><i class="fas fa-network-wired"></i> Connectivity</h3>
+                    <div class="spec-item">
+                        <span>Web Interface</span>
+                        <span>FastAPI + Vue.js</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Video Streaming</span>
+                        <span>WebRTC (280ms)</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Smart Home</span>
+                        <span>MQTT, REST API</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Notifications</span>
+                        <span>Multi-channel</span>
+                    </div>
+                </div>
+
+                <div class="spec-category">
+                    <h3><i class="fas fa-database"></i> Storage</h3>
+                    <div class="spec-item">
+                        <span>Database</span>
+                        <span>TimescaleDB</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Face Search</span>
+                        <span>FAISS</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Encryption</span>
+                        <span>AES-256</span>
+                    </div>
+                    <div class="spec-item">
+                        <span>Capacity</span>
+                        <span>10,000+ faces</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 Pi5Vision. Advanced Face Recognition for Raspberry Pi 5.</p>
+            <p>Powered by Hailo AI HAT+ (26 TOPS) for enterprise-grade performance.</p>
+            <div class="links">
+                <a href="#"><i class="fas fa-book"></i> Documentation</a>
+                <a href="#"><i class="fab fa-github"></i> GitHub</a>
+                <a href="#"><i class="fas fa-life-ring"></i> Support</a>
+                <a href="#"><i class="fas fa-download"></i> Download</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive elements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate real-time updates
+            setInterval(() => {
+                const statValues = document.querySelectorAll('.stat-value');
+                statValues.forEach(stat => {
+                    if (stat.textContent.includes('%')) return;
+                    const current = parseInt(stat.textContent);
+                    if (Math.random() < 0.3) {
+                        stat.textContent = current + Math.floor(Math.random() * 3);
+                    }
+                });
+            }, 5000);
+
+            // Add click handlers for buttons
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                });
+            });
+
+            // Simulate face detection updates
+            const faceOverlays = document.querySelectorAll('.face-overlay');
+            setInterval(() => {
+                faceOverlays.forEach(overlay => {
+                    const currentLeft = parseInt(overlay.style.left);
+                    const newLeft = currentLeft + (Math.random() - 0.5) * 2;
+                    overlay.style.left = Math.max(10, Math.min(70, newLeft)) + '%';
+                });
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
