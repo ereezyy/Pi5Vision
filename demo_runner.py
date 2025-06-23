@@ -8,8 +8,6 @@ import os
 import sys
 import json
 import time
-import asyncio
-import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -40,6 +38,14 @@ class WebContainerFaceRecognitionDemo:
         # System status
         self.is_running = False
         self.start_time = None
+        
+        # Threading availability check
+        self.threading_available = False
+        try:
+            import threading
+            self.threading_available = True
+        except ImportError:
+            print("⚠️  Threading not available, using single-threaded mode")
         
         # Demo data
         self.demo_database = {
@@ -124,28 +130,74 @@ class WebContainerFaceRecognitionDemo:
         self.is_running = True
         self.start_time = time.time()
         
-        # Start processing thread
-        processing_thread = threading.Thread(target=self._processing_loop)
-        processing_thread.daemon = True
-        processing_thread.start()
+        # Start background processes if threading is available
+        if self.threading_available:
+            import threading
+            # Start processing thread
+            processing_thread = threading.Thread(target=self._processing_loop)
+            processing_thread.daemon = True
+            processing_thread.start()
+            
+            # Start metrics thread
+            metrics_thread = threading.Thread(target=self._metrics_loop)
+            metrics_thread.daemon = True
+            metrics_thread.start()
+            
+            print("🚀 Real-time processing started (multi-threaded)")
+        else:
+            print("🚀 Real-time processing started (single-threaded)")
         
-        # Start metrics thread
-        metrics_thread = threading.Thread(target=self._metrics_loop)
-        metrics_thread.daemon = True
-        metrics_thread.start()
-        
-        print("🚀 Real-time processing started")
         print("📊 Performance monitoring active")
         print("🔄 Press Ctrl+C to stop the system")
         
         try:
-            # Main loop - show live updates
-            while self.is_running:
-                time.sleep(2)
-                self._show_live_status()
+            if self.threading_available:
+                # Multi-threaded mode - show live updates
+                while self.is_running:
+                    time.sleep(2)
+                    self._show_live_status()
+            else:
+                # Single-threaded mode - simulate processing in main loop
+                self._single_threaded_loop()
         except KeyboardInterrupt:
             print("\n🛑 Stopping system...")
             self.stop_system()
+    
+    def _single_threaded_loop(self):
+        """Single-threaded processing loop for WebContainer compatibility"""
+        frame_count = 0
+        last_metrics_update = time.time()
+        last_status_update = time.time()
+        
+        while self.is_running:
+            current_time = time.time()
+            frame_count += 1
+            
+            # Simulate frame processing every 30 frames (1 second at 30fps)
+            if frame_count % 30 == 0:
+                num_faces = self._simulate_face_detection()
+                
+                if num_faces > 0:
+                    for face_idx in range(num_faces):
+                        recognition_result = self._simulate_face_recognition()
+                        
+                        if recognition_result:
+                            person_id, confidence = recognition_result
+                            self._update_person_visit(person_id)
+                        else:
+                            self._handle_unknown_face()
+            
+            # Update metrics every 5 seconds
+            if current_time - last_metrics_update >= 5:
+                self._update_metrics()
+                last_metrics_update = current_time
+            
+            # Show status every 2 seconds
+            if current_time - last_status_update >= 2:
+                self._show_live_status()
+                last_status_update = current_time
+            
+            time.sleep(1/30)  # Simulate 30fps processing
     
     def _processing_loop(self):
         """Simulate real-time face detection and recognition processing"""
@@ -177,19 +229,22 @@ class WebContainerFaceRecognitionDemo:
     def _metrics_loop(self):
         """Update system metrics periodically"""
         while self.is_running:
-            # Update uptime
-            if self.start_time:
-                self.metrics['system_uptime'] = time.time() - self.start_time
-            
-            # Simulate slight variations in metrics
-            import random
-            if random.random() < 0.3:
-                self.metrics['total_detections'] += random.randint(0, 2)
-                self.metrics['detection_accuracy'] = 97.2 + random.uniform(-0.5, 0.5)
-                self.metrics['avg_processing_time'] = 32 + random.randint(-5, 5)
-            
+            self._update_metrics()
             time.sleep(5)
     
+    def _update_metrics(self):
+        """Update system metrics"""
+        # Update uptime
+        if self.start_time:
+            self.metrics['system_uptime'] = time.time() - self.start_time
+        
+        # Simulate slight variations in metrics
+        import random
+        if random.random() < 0.3:
+            self.metrics['total_detections'] += random.randint(0, 2)
+            self.metrics['detection_accuracy'] = 97.2 + random.uniform(-0.5, 0.5)
+            self.metrics['avg_processing_time'] = 32 + random.randint(-5, 5)
+        
     def _simulate_face_detection(self):
         """Simulate face detection in current frame"""
         import random
