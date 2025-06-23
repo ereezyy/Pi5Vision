@@ -1,0 +1,24 @@
+{
+  "system": {
+    "name": "Pi5 Face Recognition Demo",
+    "version": "2.0.0",
+    "environment": "webcontainer"
+  },
+  "camera": {
+    "device_id": 0,
+    "resolution": [
+      1280,
+      720
+    ],
+    "fps": 30
+  },
+  "hailo": {
+    "model_path": "models/retinaface_mobilenet_v1.hef",
+    "confidence_threshold": 0.5
+  },
+  "web": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "debug": true
+  }
+}
