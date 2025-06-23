@@ -2,12 +2,11 @@
 """
 Main runner for Pi5 Face Recognition System
 Orchestrates all components and provides unified startup
+WebContainer-compatible with fallback to demo mode
 """
 
 import os
 import sys
-import asyncio
-import signal
 import logging
 from pathlib import Path
 
@@ -21,8 +20,87 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def detect_environment():
+    """Detect if running in WebContainer or full system"""
+    # Check for WebContainer indicators
+    webcontainer_indicators = [
+        os.environ.get('WEBCONTAINER') == 'true',
+        'webcontainer' in os.environ.get('NODE_ENV', '').lower(),
+        not os.path.exists('/proc/cpuinfo'),  # No real /proc in WebContainer
+        os.environ.get('SHELL', '').endswith('zsh'),  # WebContainer uses zsh
+    ]
+    
+    return any(webcontainer_indicators)
+
+def check_required_modules():
+    """Check if required modules are available"""
+    try:
+        import select
+        import asyncio
+        return True
+    except ImportError as e:
+        logger.warning(f"Required module not available: {e}")
+        return False
+
+class WebContainerSystem:
+    """WebContainer-compatible system runner"""
+    
+    def __init__(self):
+        self.running = False
+        logger.info("Running in WebContainer compatibility mode")
+    
+    def start(self):
+        """Start WebContainer-compatible demo"""
+        logger.info("Starting Pi5 Face Recognition System (WebContainer Demo)...")
+        
+        try:
+            # Import and run the demo
+            from demo_runner import WebContainerFaceRecognitionDemo
+            
+            demo = WebContainerFaceRecognitionDemo()
+            demo.show_system_capabilities()
+            
+            print("\n" + "="*60)
+            print("🔄 WebContainer Demo Mode Active")
+            print("📱 Full system features simulated for demonstration")
+            print("🚀 Deploy to Raspberry Pi 5 for complete functionality")
+            print("="*60)
+            
+            input("\n📋 Press Enter to start system initialization...")
+            
+            if demo.initialize_system():
+                input("\n🚀 Press Enter to start real-time processing...")
+                demo.start_real_time_processing()
+                
+        except ImportError as e:
+            logger.error(f"Demo runner not available: {e}")
+            self.show_installation_guide()
+        except Exception as e:
+            logger.error(f"Error starting WebContainer demo: {e}")
+    
+    def show_installation_guide(self):
+        """Show installation guide for full system"""
+        print("\n" + "="*60)
+        print("🔧 FULL SYSTEM INSTALLATION REQUIRED")
+        print("="*60)
+        print("This is a WebContainer environment with limited capabilities.")
+        print("For the complete Pi5 Face Recognition System:")
+        print()
+        print("1. 📦 Deploy to Raspberry Pi 5 with Hailo AI HAT+")
+        print("2. 🔧 Run the installation script:")
+        print("   sudo chmod +x install_pi5.sh")
+        print("   sudo ./install_pi5.sh")
+        print("3. 🚀 Start the full system:")
+        print("   python3 run_system.py")
+        print()
+        print("WebContainer limitations:")
+        print("- No asyncio/select module support")
+        print("- No hardware access (cameras, AI HAT+)")
+        print("- Simulated functionality only")
+        print("="*60)
+
 class Pi5FaceRecognitionSystem:
-    """Main system orchestrator"""
+    """Full system orchestrator for Raspberry Pi"""
     
     def __init__(self):
         self.running = False
@@ -85,24 +163,50 @@ class Pi5FaceRecognitionSystem:
         
         logger.info("System shutdown complete")
 
-async def main():
-    """Main function"""
-    system = Pi5FaceRecognitionSystem()
+def main():
+    """Main function with environment detection"""
+    print("🔍 Pi5 Face Recognition System")
+    print("=" * 40)
     
-    # Set up signal handlers
-    def signal_handler(sig, frame):
-        logger.info("Received shutdown signal")
-        asyncio.create_task(system.stop())
+    # Detect environment
+    is_webcontainer = detect_environment()
+    has_required_modules = check_required_modules()
     
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    try:
-        await system.start()
-    except KeyboardInterrupt:
-        logger.info("Interrupted by user")
-    finally:
-        await system.stop()
+    if is_webcontainer or not has_required_modules:
+        logger.info("WebContainer environment detected")
+        system = WebContainerSystem()
+        system.start()
+    else:
+        logger.info("Full system environment detected")
+        try:
+            import asyncio
+            import signal
+            
+            async def run_full_system():
+                system = Pi5FaceRecognitionSystem()
+                
+                # Set up signal handlers
+                def signal_handler(sig, frame):
+                    logger.info("Received shutdown signal")
+                    asyncio.create_task(system.stop())
+                
+                signal.signal(signal.SIGINT, signal_handler)
+                signal.signal(signal.SIGTERM, signal_handler)
+                
+                try:
+                    await system.start()
+                except KeyboardInterrupt:
+                    logger.info("Interrupted by user")
+                finally:
+                    await system.stop()
+            
+            asyncio.run(run_full_system())
+            
+        except Exception as e:
+            logger.error(f"Failed to start full system: {e}")
+            logger.info("Falling back to WebContainer demo mode...")
+            system = WebContainerSystem()
+            system.start()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
