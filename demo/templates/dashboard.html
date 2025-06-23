@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi5Vision - Face Recognition Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #27ae60;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .video-section {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .video-feed {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            position: relative;
+        }
+
+        .face-box {
+            position: absolute;
+            border: 3px solid #27ae60;
+            border-radius: 8px;
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        .face-box.unknown {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .face-label {
+            position: absolute;
+            top: -30px;
+            left: 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .video-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .stats-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .recent-activity {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            transition: background 0.3s;
+        }
+
+        .activity-item:hover {
+            background: #f8f9fa;
+        }
+
+        .activity-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .activity-info {
+            flex: 1;
+        }
+
+        .activity-name {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .activity-time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .activity-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-known {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-unknown {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .alerts-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-left: 4px solid #e74c3c;
+            background: #fff5f5;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .alert-icon {
+            color: #e74c3c;
+            font-size: 1.2rem;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .alert-time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .demo-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 193, 7, 0.9);
+            color: #000;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .navbar {
+                padding: 1rem;
+            }
+            
+            .status-indicators {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">
+        🧪 DEMO MODE
+    </div>
+
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-eye"></i> Pi5Vision Dashboard
+        </div>
+        <div class="status-indicators">
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>Camera Active</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>Hailo Online</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>AI Processing</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-grid">
+            <div class="video-section">
+                <h3 style="margin-bottom: 1rem;"><i class="fas fa-video"></i> Live Camera Feed</h3>
+                <div class="video-container">
+                    <div class="video-feed">
+                        <i class="fas fa-camera" style="font-size: 3rem; opacity: 0.3;"></i>
+                        
+                        <!-- Simulated face detection boxes -->
+                        <div class="face-box" style="top: 20%; left: 25%; width: 120px; height: 140px;">
+                            <div class="face-label">John Doe (94%)</div>
+                        </div>
+                        <div class="face-box unknown" style="top: 40%; left: 55%; width: 100px; height: 120px;">
+                            <div class="face-label">Unknown (87%)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="video-controls">
+                    <button class="btn"><i class="fas fa-play"></i> Live Stream</button>
+                    <button class="btn"><i class="fas fa-camera"></i> Snapshot</button>
+                    <button class="btn"><i class="fas fa-user-plus"></i> Add Person</button>
+                    <button class="btn"><i class="fas fa-cog"></i> Settings</button>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">247</div>
+                        <div class="stat-label">Total Visitors</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">89</div>
+                        <div class="stat-label">Known Faces</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">Today's Visits</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">97.2%</div>
+                        <div class="stat-label">Accuracy</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div>
+                        <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 1rem;"></i><br>
+                        Visitor Analytics Chart<br>
+                        <small style="opacity: 0.7;">(Live data visualization)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-grid">
+            <div class="recent-activity">
+                <h3 style="margin-bottom: 1rem;"><i class="fas fa-history"></i> Recent Activity</h3>
+                
+                <div class="activity-item">
+                    <div class="activity-avatar">JD</div>
+                    <div class="activity-info">
+                        <div class="activity-name">John Doe</div>
+                        <div class="activity-time">2 minutes ago</div>
+                    </div>
+                    <div class="activity-status status-known">Known</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-avatar">?</div>
+                    <div class="activity-info">
+                        <div class="activity-name">Unknown Visitor</div>
+                        <div class="activity-time">5 minutes ago</div>
+                    </div>
+                    <div class="activity-status status-unknown">Unknown</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-avatar">MS</div>
+                    <div class="activity-info">
+                        <div class="activity-name">Mary Smith</div>
+                        <div class="activity-time">12 minutes ago</div>
+                    </div>
+                    <div class="activity-status status-known">Known</div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-avatar">BW</div>
+                    <div class="activity-info">
+                        <div class="activity-name">Bob Wilson</div>
+                        <div class="activity-time">25 minutes ago</div>
+                    </div>
+                    <div class="activity-status status-known">Known</div>
+                </div>
+            </div>
+
+            <div class="alerts-section">
+                <h3 style="margin-bottom: 1rem;"><i class="fas fa-exclamation-triangle"></i> Security Alerts</h3>
+                
+                <div class="alert-item">
+                    <div class="alert-icon">
+                        <i class="fas fa-user-secret"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">Unknown Person Detected</div>
+                        <div class="alert-time">3 minutes ago</div>
+                    </div>
+                </div>
+
+                <div class="alert-item">
+                    <div class="alert-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">After Hours Access</div>
+                        <div class="alert-time">1 hour ago</div>
+                    </div>
+                </div>
+
+                <div class="alert-item">
+                    <div class="alert-icon">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">Motion Detected</div>
+                        <div class="alert-time">2 hours ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate real-time updates
+        function updateStats() {
+            const statValues = document.querySelectorAll('.stat-value');
+            statValues.forEach(stat => {
+                if (!stat.textContent.includes('%')) {
+                    const current = parseInt(stat.textContent);
+                    if (Math.random() < 0.3) {
+                        stat.textContent = current + Math.floor(Math.random() * 3);
+                    }
+                }
+            });
+        }
+
+        // Simulate face detection box movement
+        function animateFaceBoxes() {
+            const boxes = document.querySelectorAll('.face-box');
+            boxes.forEach(box => {
+                const currentLeft = parseInt(box.style.left);
+                const currentTop = parseInt(box.style.top);
+                
+                const newLeft = currentLeft + (Math.random() - 0.5) * 2;
+                const newTop = currentTop + (Math.random() - 0.5) * 2;
+                
+                box.style.left = Math.max(10, Math.min(70, newLeft)) + '%';
+                box.style.top = Math.max(10, Math.min(70, newTop)) + '%';
+            });
+        }
+
+        // Add interactive effects
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'translateY(-2px)';
+                }, 150);
+            });
+        });
+
+        // Start animations
+        setInterval(updateStats, 5000);
+        setInterval(animateFaceBoxes, 2000);
+
+        // Add timestamp
+        const now = new Date();
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeElements = document.querySelectorAll('.activity-time');
+            timeElements.forEach((el, index) => {
+                const minutes = [2, 5, 12, 25][index] || Math.floor(Math.random() * 60);
+                el.textContent = `${minutes} minutes ago`;
+            });
+        });
+    </script>
+</body>
+</html>
