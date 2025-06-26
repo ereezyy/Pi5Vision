@@ -1,10 +1,22 @@
-# Pi5Vision: Advanced Face Recognition System
+![Pi5Vision Banner](pi5vision-banner.png)
 
-![Pi5Vision Banner](https://example.com/banner.jpg)
+<div align="center">
 
-## Overview
+![Pi5Vision Logo](pi5vision-logo.png)
 
-Pi5Vision is a state-of-the-art face recognition system designed specifically for the Raspberry Pi 5 with Hailo AI HAT+. Leveraging the powerful 26 TOPS AI accelerator, Pi5Vision delivers enterprise-grade face detection, recognition, and analysis with exceptional performance and accuracy.
+# Pi5Vision
+
+**Advanced Face Recognition System for Raspberry Pi 5**
+
+[![Made by ereezyy](https://img.shields.io/badge/Made%20by-ereezyy-blue?style=for-the-badge)](https://github.com/ereezyy)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-5-c51a4a?style=for-the-badge&logo=raspberry-pi&logoColor=white)](https://www.raspberrypi.org/)
+[![Hailo AI](https://img.shields.io/badge/Hailo-AI%20HAT+-00d4aa?style=for-the-badge)](https://hailo.ai/)
+[![MIT License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+
+*Pi5Vision is a state-of-the-art face recognition system designed specifically for the Raspberry Pi 5 with Hailo AI HAT+. Leveraging the powerful 26 TOPS AI accelerator, Pi5Vision delivers enterprise-grade face detection, recognition, and analysis with exceptional performance and accuracy.*
+
+</div>
 
 ## Key Features
 
